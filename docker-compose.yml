@@ -1,25 +1,10 @@
 version: "3.4"
 services:
-  vpn:
-    container_name: vpn
-    image: dperson/openvpn-client:latest
-    cap_add:
-      - net_admin # required to modify network interfaces
-    restart: unless-stopped
-    volumes:
-      - /dev/net:/dev/net:z # tun device
-      - ${ROOT}/config/vpn:/vpn # OpenVPN configuration
-    security_opt:
-      - label:disable
-    ports:
-      - 8112:8112 # port for deluge web UI to be reachable from local network
-    command: '-f "" -r 192.168.1.0/24' # enable firewall and route local network traffic
-
   deluge:
     container_name: deluge
     image: linuxserver/deluge:latest
     restart: unless-stopped
-    network_mode: service:vpn # run on the vpn network
+    network_mode: host # run on the vpn network
     environment:
       - PUID=${PUID} # default user id, defined in .env
       - PGID=${PGID} # default group id, defined in .env
@@ -56,6 +41,7 @@ services:
       - ${ROOT}/config/sonarr:/config # config files
       - ${ROOT}/complete/tv:/tv # tv shows folder
       - ${ROOT}/downloads:/downloads # download folder
+      - ${ROOT}/Tutorials:/tutorials
 
   radarr:
     container_name: radarr
@@ -74,7 +60,7 @@ services:
 
   plex-server:
     container_name: plex-server
-    image: linuxserver/plex:latest
+    image: linuxserver/plex:bionic
     restart: unless-stopped
     environment:
       - PUID=${PUID} # default user id, defined in .env
@@ -86,7 +72,8 @@ services:
       - ${ROOT}/config/plex/db:/config # plex database
       - ${ROOT}/config/plex/transcode:/transcode # temp transcoded files
       - ${ROOT}/complete:/data # media library
-  
+      - ${ROOT}/Tutorials:/tutorials # tutorials
+
   bazarr:
     container_name: bazarr
     image: linuxserver/bazarr
@@ -103,3 +90,21 @@ services:
       - ${ROOT}/complete/tv:/tv # tv shows folder
     ports:
       - 6767:6767
+
+  readarr:
+    build:
+      context: https://github.com/Floppy/docker-readarr.git
+      dockerfile: Dockerfile
+    container_name: readarr
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID} # default user id, defined in .env
+      - PGID=${PGID} # default group id, defined in .env
+      - TZ=${TZ}
+      - UMASK=002
+    volumes:
+      - ${ROOT}/config/readarr:/config # config files
+      - ${ROOT}/complete/ebooks:/ebooks # ebooks folder
+      - ${ROOT}/downloads:/downloads # download folder
+    ports:
+      - 8787:8787
